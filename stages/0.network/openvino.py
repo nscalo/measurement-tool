@@ -24,8 +24,6 @@ class OpenVINO:
         self.exec_network = None
         self.infer_request = None
 
-
-
     def load_core(self, model, device="CPU", cpu_extension=None, args=None):
         '''
         Load the model given IR files.
@@ -87,7 +85,6 @@ class OpenVINO:
         '''
         return self.network.inputs[self.input_blob].shape
 
-
     def async_inference(self, image, request_id=0):
         '''
         Makes an asynchronous inference request, given an input image.
@@ -104,14 +101,12 @@ class OpenVINO:
         self.exec_network.infer({self.input_blob: images})
         return
 
-
     def wait(self, request_id=0):
         '''
         Checks the status of the inference request.
         '''
         status = self.exec_network.requests[request_id].wait(-1)
         return status
-
 
     def extract_output(self, request_id=0):
         '''
