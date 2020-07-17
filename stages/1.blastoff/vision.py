@@ -5,32 +5,25 @@ import time
 import cv2
 import PIL
 import re
-
-import caffe
 import numpy as np
 import random
 from pprint import PrettyPrinter
 from copy import copy
-from tqdm import tqdm
-
 from argparse import ArgumentParser
 from coco_detection_evaluator import CocoDetectionEvaluator
 from face_label_map import category_map
 from tensorflow.python.data.experimental import parallel_interleave
 from tensorflow.python.data.experimental import map_and_batch
 from inference import *
-
 import logging
 from config import param_dict
+import os
+import numpy as np
 
 logfile = logging.basicConfig(filename="output_log.log", filemode='w', level=logging.INFO)
 
 COCO_NUM_VAL_IMAGES = 2008
-
-import os
 os.environ['GLOG_minloglevel'] = '1'
-
-import numpy as np
 
 def parse_and_preprocess(serialized_example):
   # Dense features in Example proto.
@@ -129,7 +122,6 @@ class model_infer(object):
     self.config.inter_op_parallelism_threads = self.args.num_inter_threads
     self.config.use_per_session_threads = 1
 
-    self.load_graph()
     self.setUp()
 
     if self.args.batch_size == -1:
@@ -138,32 +130,6 @@ class model_infer(object):
   def setUp(self):
     np.round = round
   
-  def preprocess_bounding_box_ssd(self, images, result, confidence_level=0.5):
-    identified = False
-    boxes = []
-    confs = []
-    height, width, _ = images[0].shape
-    for box in result[0][0]: # Output shape is 1x1x100x7
-        conf = box[2]
-        if conf >= confidence_level:
-            xmin = int(box[3] * width)
-            ymin = int(box[4] * height)
-            xmax = int(box[5] * width)
-            ymax = int(box[6] * height)
-            boxes.append([xmin, ymin, xmax, ymax])
-            confs.append(conf)
-    return boxes, confs
-
-  # pnorm for color images
-  def preprocess_bounding_box_images(self, images, bbox, image_source):
-    img = np.zeros((len(bbox),3,224,224))
-    for ii,box in enumerate(bbox):
-      ymin, xmin, ymax, xmax = box
-      i = images[ymin:ymax,xmin:xmax]
-      i = cv2.resize(i, (224,224))
-      img[ii] = i.transpose((2,0,1)) # preprocessing input to match caffe
-    return img
-
   def run_inference(self, model_object, attribute, params):
     logfile.info("Inference for accuracy check.")
     total_iter = COCO_NUM_VAL_IMAGES
@@ -171,7 +137,6 @@ class model_infer(object):
     fm = dict(zip(list(fm.values()),list(fm.keys())))
     logfile.info('total iteration is {0}'.format(str(total_iter)))
     result = []
-    break_session = 251
     global model, graph
     with tf.Session().as_default() as sess:
       if self.args.data_location:
@@ -206,22 +171,15 @@ class model_infer(object):
 
       obj = self
       if self.args.data_location:
-        for idx in tqdm(range(total_iter)):
+        for idx in range(total_iter):
           bbox, label, image_id, features = ds_iterator.get_next()
           result.append((bbox, label, image_id, features))
           
-      for idx in tqdm(range(total_iter)):
+      for idx in range(total_iter):
         run_ice_breaker_session(result, obj, fm, sess, total_iter, idx)
 
-def run_ice_breaker_session(result, obj, fm, sess, total_iter, idx):
-  bbox, label, image_id, features = result[idx]
-  step = idx
-  features, bbox, label, image_id = \
-  tuple(features.items()), bbox, label, image_id
-  if features is None:
-    return
-  bbox, label, image_id = sess.run([bbox, label, image_id])
-
+def run_ice_breaker_session(result, model_object, attribute, params, 
+fm, sess, total_iter, idx):
   # ground truth of bounding boxes from pascal voc
   ground_truth = {}
   label_gt = [fm[l] if type(l) == 'str' else fm[l.decode('utf-8')] for l in label]
@@ -233,6 +191,9 @@ def run_ice_breaker_session(result, obj, fm, sess, total_iter, idx):
   images = cv2.resize(images, (224,224))
   images = images.transpose((2,0,1))
   images = np.expand_dims(images,0)
+
+  model_object.__getattr__(attribute)(params)
+
   # object detection
   detect = copy(ground_truth)
 
@@ -240,8 +201,8 @@ def run_ice_breaker_session(result, obj, fm, sess, total_iter, idx):
   label_det = label_gt
 
   # detected conventional bounding box same as ground truth bounding boxes
-  output = obj.get_output(images)
-  boxes, confs = obj.preprocess_bounding_box_ssd(images, output)
+  output = model_object.predict(images)
+  boxes, confs = model_object.__getattr__(attribute)(params)
   if len(boxes) > 0:
     detect['boxes'] = np.asarray(boxes)
     detect['classes'] = np.asarray(label_det*len(detect['boxes']))

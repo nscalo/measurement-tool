@@ -35,6 +35,6 @@ class Caffe2:
     def predict(self, img):
 
         p = workspace.Predictor(init_net, predict_net)
-        p.run({'data': img})
+        return p.run({'data': img})
 
     
