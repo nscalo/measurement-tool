@@ -3,16 +3,25 @@ from sklearn.preprocessing import MinMaxScaler
 
 class StatisticalSignificance:
 
-    def __init__(self, model):
-        pass
+    def __init__(self, model, prob=0.5):
+        self.model = model
+        self.prob = prob
 
     def compute(self):
-        model.measure()
-        pass
+        mean = self.model.mean()
+        std = self.model.stddev()
+        
+        return self.model.measure(mean=mean, std=stddev)
 
     def iterate(self, num_iterations=5):
-        for idx in range(num_iterations):
-            value = self.compute()
+        value = 0
+        n = 0
+        for idx in range(1,num_iterations+1):
+            value += (self.compute() / idx) / idx
+            if value <= self.prob:
+                n = idx
+        return n
+        
 
 class StickModelMetric:
 
@@ -20,15 +29,15 @@ class StickModelMetric:
         pass
 
     def sticks(self): np.ndarray
-        pass
+        return np.ones((6,2))
 
     def stddev(self):
-        pass
+        return np.zeros((6,1))
 
     def mean(self):
-        pass
+        return np.ones((6,1))
 
     def measure(self, mean=0, std=0):
-        pass
+        return ((mean - 3*std) / mean.shape[0]).sum()
 
     
