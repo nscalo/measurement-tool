@@ -12,15 +12,15 @@ class Caffe2:
     
     def load_model(self):
         net = core.Net("net")
-        if net_file is not None:
-            net.Proto().ParseFromString(open(net_file, "rb").read())
+        if self.net_file is not None:
+            net.Proto().ParseFromString(open(self.net_file, "rb").read())
 
         if init_file is None:
-            fn, ext = os.path.splitext(net_file)
+            fn, ext = os.path.splitext(self.net_file)
             init_file = fn + "_init" + ext
 
         init_net = caffe2_pb2.NetDef()
-        init_net.ParseFromString(open(init_file, "rb").read())
+        init_net.ParseFromString(open(self.init_file, "rb").read())
 
         if is_run_init:
             workspace.RunNetOnce(init_net)
@@ -32,9 +32,7 @@ class Caffe2:
 
         return (net, init_net)
 
-    def predict(self, img):
-
+    def predict(self, img, input_blob_name):
         p = workspace.Predictor(init_net, predict_net)
-        return p.run({'data': img})
-
-    
+        
+        return p.run({input_blob_name: img})

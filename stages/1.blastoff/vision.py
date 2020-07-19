@@ -22,6 +22,7 @@ import numpy as np
 
 logfile = logging.basicConfig(filename="output_log.log", filemode='w', level=logging.INFO)
 
+IMAGE_SIZE = (224,224)
 COCO_NUM_VAL_IMAGES = 2008
 os.environ['GLOG_minloglevel'] = '1'
 
@@ -60,6 +61,13 @@ def parse_and_preprocess(serialized_example):
 
   return bbox[0], label, image_id, features
 
+
+def preprocessing(images):
+  images = cv2.resize(images, IMAGE_SIZE)
+  images = images.transpose((2,0,1))
+  images = np.expand_dims(images,0)
+  return images
+
 def exec_evaluator(ground_truth_dicts, detect_dicts, image_id_gt_dict,
 total_iter, batch_size):
   import sys
@@ -90,9 +98,9 @@ total_iter, batch_size):
   
   if metrics:
     pp = PrettyPrinter(indent=4)
-    logfile.info(pp.pprint(metrics))
+    logfile.info("Metrics:\n" + pp.pprint(metrics))
 
-  logfile.info(pp.pprint(detect_dicts))
+  logfile.info("Detection Dicts:\n" + pp.pprint(detect_dicts))
 
 class ParamArgs():
     def __init__(self, param_dict):
@@ -109,9 +117,11 @@ class model_infer(object):
 
   need_reshape = False
 
-  def __init__(self, param_dict):
+  def __init__(self, param_dict, inference_object, factor=1e-1):
     # parse the arguments
     self.args = obtain_args(param_dict)
+    self.inference_object = inference_object
+    self.factor = factor
 
     self.config_dict = dict()
     self.config_dict['ARCFACE_PREBATCHNORM_LAYER_INDEX']=-3
@@ -130,7 +140,7 @@ class model_infer(object):
   def setUp(self):
     np.round = round
   
-  def run_inference(self, model_object, attribute, params):
+  def run_inference(self, params):
     logfile.info("Inference for accuracy check.")
     total_iter = COCO_NUM_VAL_IMAGES
     fm = category_map
@@ -176,23 +186,26 @@ class model_infer(object):
           result.append((bbox, label, image_id, features))
           
       for idx in range(total_iter):
-        run_ice_breaker_session(result, obj, fm, sess, total_iter, idx)
+        run_ice_breaker_session(result, obj, 
+        params, fm, sess, total_iter, idx)
 
-def run_ice_breaker_session(result, model_object, attribute, params, 
+def run_ice_breaker_session(result, obj, params, 
 fm, sess, total_iter, idx):
   # ground truth of bounding boxes from pascal voc
   ground_truth = {}
+  inference_object = self.inference_object
+  model_object = self.inference_object.model_object
   label_gt = [fm[l] if type(l) == 'str' else fm[l.decode('utf-8')] for l in label]
   image_id_gt = [i if type(i) == 'str' else i.decode('utf-8') for i in image_id]
   ground_truth['classes'] = np.array(label_gt*len(ground_truth['boxes']))
   # saving all ground truth dictionaries
   images = np.asarray(PIL.Image.open(os.path.join(obj.args.imagesets_dir, image_id_gt[0])).convert('RGB'))
   
-  images = cv2.resize(images, (224,224))
-  images = images.transpose((2,0,1))
-  images = np.expand_dims(images,0)
+  images = preprocessing(images)
 
-  model_object.__getattr__(attribute)(params)
+  result = inference_object.process(**params)
+  # detected conventional bounding box same as ground truth bounding boxes
+  boxes, confs = model_object.preprocess_bounding_box_ssd(images, result, confidence_level=0.4)
 
   # object detection
   detect = copy(ground_truth)
@@ -200,9 +213,6 @@ fm, sess, total_iter, idx):
   # detection for bounding boxes from pascal voc
   label_det = label_gt
 
-  # detected conventional bounding box same as ground truth bounding boxes
-  output = model_object.predict(images)
-  boxes, confs = model_object.__getattr__(attribute)(params)
   if len(boxes) > 0:
     detect['boxes'] = np.asarray(boxes)
     detect['classes'] = np.asarray(label_det*len(detect['boxes']))
@@ -210,32 +220,6 @@ fm, sess, total_iter, idx):
     # 1, 1000, 1, 1
     detect['scores'] = np.asarray(confs)
     obj.detect_dicts[step] = detect
-    ground_truth['boxes'] = detect['boxes'] - (obj.regularization_parameter)**2 * detect['boxes'] * 1e-1
+    ground_truth['boxes'] = detect['boxes'] - (obj.regularization_parameter)**2 * detect['boxes'] * self.factor
     obj.ground_truth_dicts[step] = ground_truth
     obj.image_id_gt_dict[step] = image_id_gt[0]
-
-
-# Inference for Caffe2
-
-
-
-# Inference for Caffe
-
-
-
-# Inference for Tensorflow
-
-
-
-# Inference for ONNX
-
-
-
-# Inference for Pytorch
-
-
-
-# Inference for OpenVINO
-
-
-

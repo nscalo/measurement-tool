@@ -1,0 +1,23 @@
+<!doctype html>
+<title>{% block title %}{% endblock %} - Flaskr</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<nav>
+  <h1>Requirements App</h1>
+</nav>
+<section class="section">
+  <header class="header">
+    {% block header %}{% endblock %}
+  </header>
+  <div class="message">
+    {% block message %}{% endblock %}
+  </div>
+  <div class="fields">
+    {% block fields %}{% endblock %}
+  </div>
+  <div class="table">
+    {% block table %}{% endblock %}
+  </div>
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+</section>

@@ -19,10 +19,10 @@ class Caffe:
 
         self.network = caffe.Net(self.model, self.weights, caffe.TEST)
 
+        return self.network
+
     def get_output(self, input_blob):
         if self.need_reshape:
             self.network.blobs[self.in_blob_name].reshape(*input_blob.shape)
     
         return self.network.forward_all(**{self.in_blob_name: input_blob})[self.out_blob_name]
-
-    

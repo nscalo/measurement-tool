@@ -6,9 +6,12 @@ class ONNX:
         self.input_model = input_model
         self.input_dict = input_dict
 
-    def get_session(self, data):
-        sess = nxrun.InferenceSession()
+    def load_model(self):
+        self.sess = nxrun.InferenceSession(self.input_model)
 
-        result = sess.run(None, self.input_dict)
+        return self.sess
+
+    def get_session(self, data):
+        result = self.sess.run(None, self.input_dict)
 
         return result

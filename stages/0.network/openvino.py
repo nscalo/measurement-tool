@@ -39,7 +39,7 @@ class OpenVINO:
         # Read the IR as a IENetwork
         self.network = IENetwork(model=model_xml, weights=model_bin)
 
-        return
+        return self.network
 
     def load_model(self, model, device="CPU", cpu_extension=None, args=None):
         # Add a CPU extension, if applicable

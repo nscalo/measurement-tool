@@ -1,19 +1,17 @@
 from torch import nn
 
-def load_model(encoder, model_file):
-    checkpoint = torch.load(model_file)
-    encoder.load_state_dict(checkpoint['model_state_dict'])
-
-    return encoder, checkpoint
-
 class PyTorch:
 
-    def __init__(self, encoder: nn.Module, model_file, output_blob):
-        encoder, checkpoint = load_model(encoder, model_file)
+    def __init__(self, encoder: nn.Module, output_blob):
         self.encoder = encoder
-        self.checkpoint = checkpoint
         if (type(output_blob) != tuple) or (type(output_blob) != list):
             self.output_blob = list(output_blob)
+
+    def load_model(self, encoder, model_file):
+        self.checkpoint = torch.load(model_file)
+        self.encoder.load_state_dict(checkpoint['model_state_dict'])
+
+        return encoder, checkpoint
 
     def infer(self, **kwargs):
         self.output_tuple = self.encoder.forward(**kwargs)

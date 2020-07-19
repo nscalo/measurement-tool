@@ -59,3 +59,14 @@ The stages are listed on 7 stages:
 
     Additional tables of risk register, containing ordered list of APIs and their features are listed within, the other tables include review list that include the list of APIs that need revisiting and ratings list that include satisfaction and dissatisfaction ratings.
 
+_____________________________________________________________________________________
+
+## How to execute the app
+
+### Displaying requirements on a browser
+
+python start.py --from-stage="blastoff" --to-stage="requirements" --run-html --dataset="dataset/tfrecord-voc.record"
+
+### Managing creep of requirements on a browser
+
+python start.py --from-stage="requirements" --to-stage="stock" --run-html --dataset="dataset/tfrecord-voc.record"

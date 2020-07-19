@@ -11,7 +11,7 @@ class StatisticalSignificance:
         mean = self.model.mean()
         std = self.model.stddev()
         
-        return self.model.measure(mean=mean, std=stddev)
+        return self.model.measure(mean=mean, std=std)
 
     def iterate(self, num_iterations=5):
         value = 0
