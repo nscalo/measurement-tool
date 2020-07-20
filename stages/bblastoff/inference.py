@@ -1,5 +1,10 @@
 import tensorflow as tf
 from time import time
+from stages.anetwork.caffe import Caffe
+from stages.anetwork.caffe2 import Caffe2
+from stages.anetwork.onnx import ONNX
+from stages.anetwork.pytorch import PyTorch
+from stages.anetwork.tensorlib import TensorFlow
 
 class Inference:
 
@@ -42,7 +47,7 @@ class Inference:
             self.model_object.infer(**kwargs)
             self.results = self.model_object.predict()
         elif self.framework == "tensorflow":
-            self.model_object.predict(**kwargs)
+            self.results = self.model_object.predict(**kwargs)
         end_time = time()
 
         return end_time - start_time

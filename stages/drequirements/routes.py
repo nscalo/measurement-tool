@@ -87,14 +87,14 @@ def accuracy():
 
 @app.route('/box_predictions/all')
 def box_predictions():
-    rows1, rows2, rows3, rows4, rows5 = generate_accuracy_response()
+    rows1, rows2, rows3, rows4, rows5 = generate_box_predictions_response()
     response = make_response(enc.encode([rows1, rows2, rows3, rows4, rows5]))
     response.headers['Content-Type'] = 'application/json'
     return response
 
 @app.route('/box_predictions/all/html')
 def box_predictions():
-    rows1, rows2, rows3, rows4, rows5 = generate_accuracy_response()
+    rows1, rows2, rows3, rows4, rows5 = generate_box_predictions_response()
     build_direction = "LEFT_TO_RIGHT"
     table_attributes = {"style" : "width:100%"}
     data['table'] = convert([rows1, rows2, rows3, rows4, rows5], 

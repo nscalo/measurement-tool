@@ -10,17 +10,14 @@ import random
 from pprint import PrettyPrinter
 from copy import copy
 from argparse import ArgumentParser
-from coco_detection_evaluator import CocoDetectionEvaluator
-from face_label_map import category_map
+from .coco_detection_evaluator import CocoDetectionEvaluator
+from .face_label_map import category_map
 from tensorflow.python.data.experimental import parallel_interleave
 from tensorflow.python.data.experimental import map_and_batch
-from inference import *
+from .inference import *
 import logging
-from config import param_dict
 import os
 import numpy as np
-
-logfile = logging.basicConfig(filename="output_log.log", filemode='w', level=logging.INFO)
 
 IMAGE_SIZE = (224,224)
 COCO_NUM_VAL_IMAGES = 2008
@@ -98,9 +95,9 @@ total_iter, batch_size):
   
   if metrics:
     pp = PrettyPrinter(indent=4)
-    logfile.info("Metrics:\n" + pp.pprint(metrics))
+    self.logfile.info("Metrics:\n" + pp.pprint(metrics))
 
-  logfile.info("Detection Dicts:\n" + pp.pprint(detect_dicts))
+  self.logfile.info("Detection Dicts:\n" + pp.pprint(detect_dicts))
 
 class ParamArgs():
     def __init__(self, param_dict):
@@ -117,11 +114,13 @@ class model_infer(object):
 
   need_reshape = False
 
-  def __init__(self, param_dict, inference_object, factor=1e-1):
+  def __init__(self, param_dict, inference_object, factor=1e-1, output_log="output_log.log"):
     # parse the arguments
     self.args = obtain_args(param_dict)
     self.inference_object = inference_object
     self.factor = factor
+
+    self.logfile = logging.basicConfig(filename=output_log, filemode='w', level=logging.INFO)
 
     self.config_dict = dict()
     self.config_dict['ARCFACE_PREBATCHNORM_LAYER_INDEX']=-3
@@ -141,11 +140,11 @@ class model_infer(object):
     np.round = round
   
   def run_inference(self, params):
-    logfile.info("Inference for accuracy check.")
+    self.logfile.info("Inference for accuracy check.")
     total_iter = COCO_NUM_VAL_IMAGES
     fm = category_map
     fm = dict(zip(list(fm.values()),list(fm.keys())))
-    logfile.info('total iteration is {0}'.format(str(total_iter)))
+    self.logfile.info('total iteration is {0}'.format(str(total_iter)))
     result = []
     global model, graph
     with tf.Session().as_default() as sess:

@@ -15,9 +15,9 @@ class Caffe2:
         if self.net_file is not None:
             net.Proto().ParseFromString(open(self.net_file, "rb").read())
 
-        if init_file is None:
+        if self.init_file is None:
             fn, ext = os.path.splitext(self.net_file)
-            init_file = fn + "_init" + ext
+            self.init_file = fn + "_init" + ext
 
         init_net = caffe2_pb2.NetDef()
         init_net.ParseFromString(open(self.init_file, "rb").read())

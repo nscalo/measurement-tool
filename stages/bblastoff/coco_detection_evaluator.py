@@ -17,8 +17,8 @@
 #
 #
 
-import coco_tools
-import face_label_map
+from . import coco_tools
+from . import face_label_map
 
 class CocoDetectionEvaluator:
     """Class to evaluate COCO detection metrics."""

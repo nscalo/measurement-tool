@@ -65,8 +65,9 @@ ________________________________________________________________________________
 
 ### Displaying requirements on a browser
 
-python start.py --from-stage="blastoff" --to-stage="requirements" --run-html --dataset="dataset/tfrecord-voc.record"
+python start.py --from-stage="blastoff" --to-stage="requirements" --run-html --dataset="dataset/tfrecord-voc.record" --imagesets_dir="./VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007"
 
 ### Managing creep of requirements on a browser
 
-python start.py --from-stage="requirements" --to-stage="stock" --run-html --dataset="dataset/tfrecord-voc.record"
+python start.py --from-stage="requirements" --to-stage="stock" --run-html --dataset="dataset/tfrecord-voc.record" --imagesets_dir="./VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007"
+
