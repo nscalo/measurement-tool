@@ -1,6 +1,7 @@
 import os
 from caffe2.proto import caffe2_pb2
 from caffe2.python import core, workspace
+import numpy as np
 
 class Caffe2:
 
@@ -11,28 +12,30 @@ class Caffe2:
         self.is_create_net = is_create_net
     
     def load_model(self):
-        net = core.Net("net")
+        self.net = core.Net("net")
         if self.net_file is not None:
-            net.Proto().ParseFromString(open(self.net_file, "rb").read())
+            self.net.Proto().ParseFromString(open(self.net_file, "rb").read())
 
         if self.init_file is None:
             fn, ext = os.path.splitext(self.net_file)
             self.init_file = fn + "_init" + ext
 
-        init_net = caffe2_pb2.NetDef()
-        init_net.ParseFromString(open(self.init_file, "rb").read())
+        self.init_net = caffe2_pb2.NetDef()
+        self.init_net.ParseFromString(open(self.init_file, "rb").read())
 
-        if is_run_init:
-            workspace.RunNetOnce(init_net)
-            create_blobs_if_not_existed(net.external_inputs)
-            if net.Proto().name == "":
-                net.Proto().name = "net"
-        if is_create_net:
-            workspace.CreateNet(net)
+        if self.is_run_init:
+            workspace.RunNetOnce(self.init_net)
+            if self.net.Proto().name == "":
+                self.net.Proto().name = "net"
+        if self.is_create_net:
+            workspace.CreateNet(self.net)
 
-        return (net, init_net)
+        return (self.net, self.init_net)
 
-    def predict(self, img, input_blob_name):
-        p = workspace.Predictor(init_net, predict_net)
-        
-        return p.run({input_blob_name: img})
+    def predict(self, input_blob):
+        input_blob = input_blob['data']
+        p = workspace.Predictor(self.init_net, self.net)
+        input_blob = input_blob.transpose((2,0,1))
+        input_blob = np.expand_dims(input_blob, 0)
+        input_blob = input_blob.astype(np.float32)
+        return p.run([input_blob])

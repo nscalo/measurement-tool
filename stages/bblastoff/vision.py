@@ -17,10 +17,9 @@ from tensorflow.python.data.experimental import map_and_batch
 from .inference import *
 import logging
 import os
-import numpy as np
 
 IMAGE_SIZE = (224,224)
-COCO_NUM_VAL_IMAGES = 2008
+COCO_NUM_VAL_IMAGES = 10
 os.environ['GLOG_minloglevel'] = '1'
 
 def parse_and_preprocess(serialized_example):
@@ -120,13 +119,14 @@ class model_infer(object):
     self.inference_object = inference_object
     self.factor = factor
 
-    self.logfile = logging.basicConfig(filename=output_log, filemode='w', level=logging.INFO)
+    logging.basicConfig(filename=output_log, filemode='w', level=logging.INFO)
+    self.logfile = logging.getLogger('tcpserver')
 
     self.config_dict = dict()
     self.config_dict['ARCFACE_PREBATCHNORM_LAYER_INDEX']=-3
     self.config_dict['ARCFACE_POOLING_LAYER_INDEX']=-4
 
-    self.config = tf.ConfigProto()
+    self.config = tf.compat.v1.ConfigProto()
     self.config.intra_op_parallelism_threads = self.args.num_intra_threads
     self.config.inter_op_parallelism_threads = self.args.num_inter_threads
     self.config.use_per_session_threads = 1
@@ -147,53 +147,57 @@ class model_infer(object):
     self.logfile.info('total iteration is {0}'.format(str(total_iter)))
     result = []
     global model, graph
-    with tf.Session().as_default() as sess:
-      if self.args.data_location:
-        self.build_data_sess()
-      else:
-        raise Exception("no data location provided")
-      evaluator = CocoDetectionEvaluator()
-      total_samples = 0
-      self.coord = tf.train.Coordinator()
-      tfrecord_paths = [self.args.data_location]
-      ds = tf.data.TFRecordDataset.list_files(tfrecord_paths)
-      ds = ds.apply(
-        parallel_interleave(
-          tf.data.TFRecordDataset, cycle_length=1, block_length=1,
-          buffer_output_elements=10000, prefetch_input_elements=10000))
-      ds = ds.prefetch(buffer_size=10000)
-      ds = ds.apply(
-          map_and_batch(
-            map_func=parse_and_preprocess,
-            batch_size=self.args.batch_size,
-            num_parallel_batches=1,
-            num_parallel_calls=None))
-      ds = ds.prefetch(buffer_size=10000)
-      ds_iterator = tf.data.make_one_shot_iterator(ds)
-      state = None
-      warmup_iter = 0
-      
-      self.ground_truth_dicts = {}
-      self.detect_dicts = {}
-      self.total_iter = total_iter
-      self.image_id_gt_dict = {}
+    with tf.compat.v1.Session().as_default() as sess:
+      with sess.graph.as_default() as graph:
+        evaluator = CocoDetectionEvaluator()
+        total_samples = 0
+        self.coord = tf.train.Coordinator()
+        tfrecord_paths = [self.args.data_location]
+        ds = tf.data.TFRecordDataset.list_files(tfrecord_paths)
+        ds = ds.apply(
+          parallel_interleave(
+            tf.data.TFRecordDataset, cycle_length=1, block_length=1,
+            buffer_output_elements=10000, prefetch_input_elements=10000))
+        ds = ds.prefetch(buffer_size=10000)
+        ds = ds.apply(
+            map_and_batch(
+              map_func=parse_and_preprocess,
+              batch_size=self.args.batch_size,
+              num_parallel_batches=1,
+              num_parallel_calls=None))
+        ds = ds.prefetch(buffer_size=10000)
+        ds_iterator = tf.compat.v1.data.make_one_shot_iterator(ds)
+        state = None
+        warmup_iter = 0
+        
+        self.ground_truth_dicts = {}
+        self.detect_dicts = {}
+        self.total_iter = total_iter
+        self.image_id_gt_dict = {}
 
-      obj = self
-      if self.args.data_location:
-        for idx in range(total_iter):
-          bbox, label, image_id, features = ds_iterator.get_next()
-          result.append((bbox, label, image_id, features))
-          
-      for idx in range(total_iter):
-        run_ice_breaker_session(result, obj, 
-        params, fm, sess, total_iter, idx)
+        obj = self
+        if self.args.data_location:
+          for idx in range(total_iter):
+            bbox, label, image_id, features = ds_iterator.get_next()
+            result.append((bbox, label, image_id, features))
+          for idx in range(total_iter):
+            run_ice_breaker_session(result, obj,
+            params, fm, sess, total_iter, idx)
 
 def run_ice_breaker_session(result, obj, params, 
 fm, sess, total_iter, idx):
   # ground truth of bounding boxes from pascal voc
+  bbox, label, image_id, features = result[idx]
+  step = idx
+  features, bbox, label, image_id = \
+  tuple(features.items()), bbox, label, image_id
+  if features is None:
+    return
+  bbox, label, image_id = sess.run([bbox, label, image_id])
   ground_truth = {}
-  inference_object = self.inference_object
-  model_object = self.inference_object.model_object
+  ground_truth['boxes'] = np.asarray(bbox[0])
+  inference_object = obj.inference_object
+  model_object = obj.inference_object.model_object
   label_gt = [fm[l] if type(l) == 'str' else fm[l.decode('utf-8')] for l in label]
   image_id_gt = [i if type(i) == 'str' else i.decode('utf-8') for i in image_id]
   ground_truth['classes'] = np.array(label_gt*len(ground_truth['boxes']))
@@ -202,23 +206,34 @@ fm, sess, total_iter, idx):
   
   images = preprocessing(images)
 
-  result = inference_object.process(**params)
+  if(type(params) == dict):
+    result = inference_object.process(**params)
+  else:
+    result = inference_object.process(dict(params))
+  results = inference_object.results
   # detected conventional bounding box same as ground truth bounding boxes
-  boxes, confs = model_object.preprocess_bounding_box_ssd(images, result, confidence_level=0.4)
+  # if (inference_object.framework == "caffe2"):
+  #   boxes, confs = inference_object.preprocess_bounding_box_ssd_heatmap(images, results)
+  # elif (inference_object.framework == "onnx"):
+  #   boxes, confs = inference_object.preprocess_bounding_box_ssd(images, results, confidence_level=0.4)
+  # elif (inference_object.framework == "pytorch"):
+  #   boxes, confs = inference_object.preprocess_bounding_box_ssd(images, results, confidence_level=0.4)
+  # elif (inference_object.framework == "tensorflow"):
+  #   boxes, confs = inference_object.preprocess_bounding_box_ssd(images, results, confidence_level=0.4)
 
-  # object detection
-  detect = copy(ground_truth)
+  # # object detection
+  # detect = copy(ground_truth)
 
-  # detection for bounding boxes from pascal voc
-  label_det = label_gt
+  # # detection for bounding boxes from pascal voc
+  # label_det = label_gt
 
-  if len(boxes) > 0:
-    detect['boxes'] = np.asarray(boxes)
-    detect['classes'] = np.asarray(label_det*len(detect['boxes']))
+  # if len(boxes) > 0:
+  #   detect['boxes'] = np.asarray(boxes)
+  #   detect['classes'] = np.asarray(label_det*len(detect['boxes']))
 
-    # 1, 1000, 1, 1
-    detect['scores'] = np.asarray(confs)
-    obj.detect_dicts[step] = detect
-    ground_truth['boxes'] = detect['boxes'] - (obj.regularization_parameter)**2 * detect['boxes'] * self.factor
-    obj.ground_truth_dicts[step] = ground_truth
-    obj.image_id_gt_dict[step] = image_id_gt[0]
+  #   # 1, 1000, 1, 1
+  #   detect['scores'] = np.asarray(confs)
+  #   obj.detect_dicts[step] = detect
+  #   ground_truth['boxes'] = detect['boxes'] - (obj.regularization_parameter)**2 * detect['boxes'] * self.factor
+  #   obj.ground_truth_dicts[step] = ground_truth
+  #   obj.image_id_gt_dict[step] = image_id_gt[0]

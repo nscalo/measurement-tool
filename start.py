@@ -4,7 +4,7 @@ import argparse
 from torch import nn
 import pickle
 from stages.bblastoff.config import param_dict
-from stages.bblastoff.inference import Inference
+from stages.bblastoff.inference import Inference, SSDInference
 from stages.bblastoff.vision import parse_and_preprocess, exec_evaluator, model_infer
 
 def parse_args():
@@ -55,30 +55,30 @@ if __name__ == "__main__":
             args.param_args = param_dict
             args.input_blob = cv2.imread(args.input_blob)
 
-            inference_object = Inference(framework=models[0])
-            inference_object.create_instance(input_graph=args.input_graph, input_weights=args.input_weights, 
-            in_blob_name=args.in_blob_name, 
-            out_blob_name=args.out_blob_name, need_reshape=args.need_reshape)
-            inference_object.load_model()
-            infer_object = model_infer(param_dict, inference_object, factor=1e-1, output_log="output_"+str(models[0])+"_log.log")
-            infer_object.run_inference({'input_blob': args.input_blob})
+            # inference_object = Inference(framework=models[0])
+            # inference_object.create_instance(input_graph=args.input_graph, input_weights=args.input_weights, 
+            # in_blob_name=args.in_blob_name, 
+            # out_blob_name=args.out_blob_name, need_reshape=args.need_reshape)
+            # inference_object.load_model()
+            # infer_object = model_infer(param_dict, inference_object, factor=1e-1, output_log="output_"+str(models[0])+"_log.log")
+            # infer_object.run_inference({'input_blob': args.input_blob})
 
-            print("Created " + "output_"+str(models[0])+"_log.log file")
+            # print("Created " + "output_"+str(models[0])+"_log.log file")
 
-            inference_object = Inference(framework=models[1])
+            inference_object = SSDInference(framework=models[1])
             inference_object.create_instance(args.predict_net, init_net=args.init_net, 
             is_run_init=args.is_run_init, is_create_net=args.is_create_net)
             inference_object.load_model()
             infer_object = model_infer(param_dict, inference_object, factor=1e-1, output_log="output_"+str(models[0])+"_log.log")
-            infer_object.run_inference({'input_blob': args.input_blob})
+            infer_object.run_inference(zip(['data'], [args.input_blob]))
 
             print("Created " + "output_"+str(models[1])+"_log.log file")
 
-            inference_object = Inference(framework=models[2])
+            inference_object = SSDInference(framework=models[2])
             inference_object.create_instance(args.input_model)
             inference_object.load_model()
             infer_object = model_infer(param_dict, inference_object, factor=1e-1, output_log="output_"+str(models[0])+"_log.log")
-            infer_object.run_inference({'input_blob': args.input_blob})
+            infer_object.run_inference({'input': args.input_blob})
 
             print("Created " + "output_"+str(models[2])+"_log.log file")
 
@@ -96,9 +96,9 @@ if __name__ == "__main__":
             # infer_object = model_infer(param_dict, inference_object, factor=1e-1, output_log="output_"+str(models[0])+"_log.log")
             # infer_object.run_inference({'input_blob': args.input_blob})
 
-            # print("Created " + "output_"+str(models[4])+"_log.log file")
+            print("Created " + "output_"+str(models[4])+"_log.log file")
 
-            inference_object = Inference(framework=models[5])
+            inference_object = SSDInference(framework=models[5])
             inference_object.create_instance(param_args=args.param_args)
             inference_object.load_model(args.model_file)
             infer_object = model_infer(param_dict, inference_object, factor=1e-1, output_log="output_"+str(models[0])+"_log.log")

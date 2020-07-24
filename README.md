@@ -67,7 +67,7 @@ ________________________________________________________________________________
 
 ```bash
 
-python start.py --from-stage="blastoff" --to-stage="requirements" --run-html --dataset="dataset/tfrecord-voc.record" --imagesets_dir="./VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007"
+    python start.py --from-stage="blastoff" --to-stage="requirements" --run-html --dataset="dataset/tfrecord-voc.record" --imagesets_dir="./VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007"
 
 ```
 
@@ -75,6 +75,10 @@ python start.py --from-stage="blastoff" --to-stage="requirements" --run-html --d
 
 ```bash
 
-python start.py --from-stage="requirements" --to-stage="stock" --run-html --dataset="dataset/tfrecord-voc.record" --imagesets_dir="./VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007"
+    python start.py --from-stage="requirements" --to-stage="stock" --run-html --dataset="dataset/tfrecord-voc.record" --imagesets_dir="./VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007"
 
 ```
+
+_____________________________________________________________________________________
+
+

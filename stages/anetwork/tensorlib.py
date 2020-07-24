@@ -1,9 +1,9 @@
 import tensorflow as tf
 import sys
 import dataset
-from tf_text_graph_common import readTextMessage
-from tf_text_graph_ssd import createSSDGraph
-from tf_text_graph_faster_rcnn import createFasterRCNNGraph
+from .tf_text_graph_common import readTextMessage
+from .tf_text_graph_ssd import createSSDGraph
+from .tf_text_graph_faster_rcnn import createFasterRCNNGraph
 
 class TensorFlow:
 
